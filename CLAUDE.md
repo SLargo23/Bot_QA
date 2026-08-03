@@ -57,21 +57,22 @@ Flujo de ejecución en `change_badge.py`:
 
 Lee de forma anticipada estos CSV en DataFrames al momento de importar (no hay validación de esquema ni auto-creación — CSV de configuración faltantes o mal formados romperán el arranque):
 
-- `kore_data.csv` → `df_data_kore` (credenciales + rol, indexado por `Pre` + `Codigo` en `{'user','pass','rol'}`)
+- `usuarios_kore.csv` → `df_usuarios` (credenciales por usuario registrado, indexado por `Pre` + `Usuario`)
+- `usuario_roles.csv` → `df_usuario_roles` (qué roles tiene asignados cada usuario; una fila por combinación `Pre` + `Usuario` + `Rol`, así un usuario con varios roles ocupa varias filas)
+- `roles_kore.csv` → `df_roles_kore` (catálogo completo de roles de KORE, indexado por `Rol`, con el `ItemMenu` — texto del ítem de menú lateral que confirma que se navegó a ese rol; roles sin ese dato confirmado usan el placeholder `REEMPLAZAR_ITEM_MENU`)
 - `kore_URL.csv` → `df_data_URL` (URLs de KORE, indexado por `Pre` + `Contexto`)
-- `BCE_data.csv` → `df_data_BCE` (URLs del portal BCE, indexado por `Pre`)
-- `tabla_monedas.csv` → `df_tabla_monedas` (generado por el bot; códigos de moneda extraídos de KORE)
-- `tasas_fecha {hoy}.csv` → `df_tasas_oficiales` (generado por el bot; envuelto en try/except FileNotFoundError ya que no existirá antes de la primera consulta al BCE en la corrida)
 
-Las variables divididas `df_data_kore_prod`/`_pre` y `df_data_URL_prod`/`_pre` también existen en este módulo pero son código muerto — nada las lee; todas las consultas reales filtran el DataFrame sin dividir por `Pre==set_ambient` directamente.
+`kore_page.select_rol(page, set_ambient, usuario, rol)` valida contra `df_usuario_roles` que el `rol` pedido esté realmente asignado a ese `usuario` antes de tocar la UI (levanta `ValueError` si no). `kore_page.esperar_menu_rol(page, rol, timeout)` resuelve el ítem de menú a esperar consultando `df_roles_kore` — el mapeo rol→ítem de menú vive en un solo lugar, no se repite por usuario ni se hardcodea en `change_badge.py`.
+
+La variable dividida `df_data_URL_prod`/`_pre` también existe en este módulo pero es código muerto — nada la lee; todas las consultas reales filtran el DataFrame sin dividir por `Pre==set_ambient` directamente.
 
 ### Nota sobre secretos
 
-Las credenciales de preproducción están commiteadas en texto plano en `data/kore_data.csv` (login real de KORE). Las filas de producción usan strings placeholder literales (`REEMPLAZAR_...`) que deben completarse manualmente antes de cualquier corrida en producción. Tratar estos CSV como sensibles — no agregar credenciales reales de producción al control de versiones; si esto se lleva a producción, sacar las credenciales de los CSV commiteados.
+Las credenciales de preproducción están en texto plano en `data/usuarios_kore.csv` (logins reales de KORE, uno por usuario registrado). Las filas de producción usan strings placeholder literales (`REEMPLAZAR_...`) que deben completarse manualmente antes de cualquier corrida en producción. Tratar estos CSV como sensibles — no agregar credenciales reales de producción al control de versiones; si esto se lleva a producción, sacar las credenciales de los CSV commiteados.
 
 ### Detalles pendientes conocidos (no "arreglar" en silencio — confirmar la intención primero)
 
 - `pages/locators.py` es un placeholder vacío y sin usar.
-- Tanto `pages/bce_page.py` como `pages/kore_page.py` importan de `playwright.sync_api` al inicio a pesar de ser completamente async y estar manejados por `async_playwright` — import muerto/sin usar.
 - Varios comentarios del código fuente en `kore_page.py` tienen mojibake (ej. `ValidaciÃ³n`) por un desajuste de encoding al guardar el archivo.
-- Los CSV están globalmente en `.gitignore` (`*.csv`) pero los CSV de configuración (`kore_data.csv`, `kore_URL.csv`, `BCE_data.csv`) y algunos generados están commiteados de todas formas en este checkout — los CSV de configuración son necesarios para que el bot corra (no existe lógica de bootstrap/creación para ellos).
+- Los CSV están globalmente en `.gitignore` (`*.csv`). En este checkout, ninguno está realmente trackeado en git (`git ls-files` no los lista — verificado; la afirmación anterior de que "los CSV de configuración están commiteados de todas formas" no es cierta en este repo) — todos, incluyendo `usuarios_kore.csv`, `usuario_roles.csv`, `roles_kore.csv` y `kore_URL.csv`, son necesarios para que el bot corra pero solo existen en disco local; habría que `git add -f` cada uno si se quieren versionar.
+- `data/data_structure.py` documenta en su código un flujo BCE (URLs, tasas oficiales) y una tabla de monedas que ya no se generan ni se leen en el flujo actual — son restos del pivote hacia pruebas de login+rol (ver `RESUMEN_IMPLEMENTACION_LOGIN_ROL.md`). La sección "Arquitectura" de este archivo, más abajo, todavía describe ese flujo BCE completo (`pages/bce_page.py`) como si estuviera activo — ese archivo ya no existe en el repo; esa sección está desactualizada y no se tocó como parte de esta implementación.

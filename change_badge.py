@@ -32,6 +32,8 @@ async def run_automation():
             page = await context.new_page()
 
         set_ambient: int = 1  # 0 = PROD | 1 = PRE
+        usuario: str = "cmoncayo@ec.krugercorp.com"
+        rol: str = "Analista de Talento Humano"
 
         try:
 
@@ -46,15 +48,26 @@ async def run_automation():
             await kore_page.login(
                 page,
                 set_ambient=set_ambient,
-                contexto="login_home"
+                contexto="login_home",
+                usuario=usuario
             )
 
             await kore_page.select_rol(
                 page,
                 set_ambient=set_ambient,
-                rol="Gerente de PMO"
+                usuario=usuario,
+                rol=rol
             )
 
+            print("Esperando menú del rol...")
+
+            await kore_page.esperar_menu_rol(
+                page,
+                rol=rol,
+                timeout=30000
+            )
+
+            print("Menú del rol visible. Deteniendo el bot.")
             print("===== BOT FINALIZADO OK =====")
 
         except Exception as ex:

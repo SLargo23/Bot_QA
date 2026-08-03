@@ -9,11 +9,11 @@ import pandas as pd
 #A la variable, darle todo el valor del archivo
 
 # Read CSV file
-df_data_kore= pd.read_csv('data/kore_data.csv', sep=',')
+df_usuarios = pd.read_csv('data/usuarios_kore.csv', sep=',')
 
-df_data_kore_prod = df_data_kore[df_data_kore['Pre'] == 0]
+df_usuario_roles = pd.read_csv('data/usuario_roles.csv', sep=',')
 
-df_data_kore_pre=df_data_kore[df_data_kore['Pre']==1]
+df_roles_kore = pd.read_csv('data/roles_kore.csv', sep=',')
 
 
 df_data_URL= pd.read_csv('data/kore_URL.csv', sep=',')
@@ -22,7 +22,7 @@ df_data_URL_prod = df_data_URL[df_data_URL['Pre'] == 0]
 df_data_URL_pre=df_data_URL[df_data_URL['Pre']==1]
 
 
-df_tabla_monedas = pd.read_csv('data/tabla_monedas.csv', sep=',')
+
 
 
 

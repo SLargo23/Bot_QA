@@ -1,4 +1,4 @@
-# Bot Banco Central Kore
+# Bot Kore
 
 ## Installation
 
