@@ -5,7 +5,7 @@
 1. Clone the repository or download the project files.
 2. Navigate to the project folder:
    ```bash
-   cd "c:\Users\pbenavides\Desktop\Bot Banco Central Kore"
+   cd "path\to\Bot_K"
    ```
 3. Create and activate a Python virtual environment:
    - On Windows PowerShell:

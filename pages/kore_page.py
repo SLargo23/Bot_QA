@@ -55,6 +55,15 @@ async def select_rol(page, set_ambient, usuario, rol):
             f"(ver data/usuario_roles.csv). Roles asignados: {list(roles_usuario)}"
         )
 
+    await seleccionar_rol_ui(page, rol)
+
+
+async def seleccionar_rol_ui(page, rol):
+    """Selecciona un rol en el dropdown sin validar contra usuario_roles.csv.
+
+    Usado por herramientas de descubrimiento (verificar_roles.py) que ya
+    obtuvieron la lista de roles directamente de la UI vía listar_roles_ui.
+    """
     await page.locator("span.icon-down-arrow.ml-2.text-xs").click()
     await page.locator(".css-1wy0on6").click()
 
@@ -64,6 +73,35 @@ async def select_rol(page, set_ambient, usuario, rol):
 
     # Confirma que el dropdown se cerró tras aplicar la selección
     await expect(opcion_rol).not_to_be_visible(timeout=10000)
+
+
+async def listar_roles_ui(page):
+    await page.locator("span.icon-down-arrow.ml-2.text-xs").click()
+    await page.locator(".css-1wy0on6").click()
+
+    opciones = page.get_by_role("option")
+    await expect(opciones.first).to_be_visible(timeout=10000)
+    textos = await opciones.all_text_contents()
+
+    await page.keyboard.press("Escape")
+    await expect(opciones.first).not_to_be_visible(timeout=10000)
+
+    return [t.strip() for t in textos if t.strip()]
+
+
+async def listar_modulos_menu(page, timeout=15000):
+    """Lista los módulos visibles en el menú lateral para el rol activo actualmente.
+
+    El menú lateral (react-pro-sidebar) usa el contenedor estable
+    'aside.ps-sidebar-root' sin importar el rol seleccionado, así que no
+    depende de conocer de antemano ningún texto de menú específico del rol.
+    """
+    sidebar = page.locator("aside.ps-sidebar-root")
+    await expect(sidebar).to_be_visible(timeout=timeout)
+    await expect(sidebar.locator("a").first).to_be_attached(timeout=timeout)
+
+    textos = await sidebar.locator("a").all_text_contents()
+    return [t.strip() for t in textos if t.strip()]
 
 
 async def esperar_menu_rol(page, rol, timeout=30000):
