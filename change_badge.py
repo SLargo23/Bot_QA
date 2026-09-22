@@ -32,8 +32,8 @@ async def run_automation():
             page = await context.new_page()
 
         set_ambient: int = 1  # 0 = PROD | 1 = PRE
-        usuario: str = "cmoncayo@ec.krugercorp.com"
-        rol: str = "Analista de Talento Humano"
+        usuario: str = "admindev@krugercorp.com"
+        rol: str = "Administrador"
 
         try:
 

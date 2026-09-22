@@ -11,10 +11,23 @@ async def login(*args, **kwargs):
     contexto:str = args[2] if len(args) > 2 else kwargs.get('contexto')
     usuario:str = args[3] if len(args) > 3 else kwargs.get('usuario')
     #df_data_URL[df_data_URL['Pre']==set_ambient]['URL']
+    fila_url = ds.df_data_URL.loc[
+        (ds.df_data_URL['Pre'] == set_ambient) &
+        (ds.df_data_URL['Contexto'] == contexto)
+    ]
+    if fila_url.empty:
+        raise ValueError(
+            f"No existe una URL para Pre={set_ambient} y Contexto='{contexto}'. "
+            "Completa data/kore_URL.csv."
+        )
+    url = fila_url['URL'].values[0]
+    if not isinstance(url, str) or not url.strip():
+        raise ValueError(
+            f"La URL para Pre={set_ambient} y Contexto='{contexto}' está vacía "
+            "en data/kore_URL.csv."
+        )
     await page.goto(
-        ds.df_data_URL.loc[
-            (ds.df_data_URL['Pre']==set_ambient) & (ds.df_data_URL['Contexto']==contexto)
-        ]['URL'].values[0],
+        url,
         wait_until='domcontentloaded'
     )
     await actions_login(page,set_ambient,usuario)
@@ -102,6 +115,57 @@ async def listar_modulos_menu(page, timeout=15000):
 
     textos = await sidebar.locator("a").all_text_contents()
     return [t.strip() for t in textos if t.strip()]
+
+
+async def probar_modulos_menu(page, rol, espera_ms=4000, timeout=8000):
+    """Hace clic en cada opción visible del menú y registra su resultado."""
+    sidebar = page.locator("aside.ps-sidebar-root")
+    await expect(sidebar).to_be_visible(timeout=timeout)
+
+    enlaces = sidebar.locator("a")
+    opciones = []
+    for indice in range(await enlaces.count()):
+        enlace = enlaces.nth(indice)
+        texto = (await enlace.inner_text()).strip()
+        if texto and await enlace.is_visible():
+            opciones.append(texto)
+
+    resultados = []
+    for texto in opciones:
+        error = None
+        url = None
+        try:
+            # Cada navegación puede reconstruir el menú; se vuelve a seleccionar
+            # el rol y se busca el enlace visible por texto, no por índice.
+            await seleccionar_rol_ui(page, rol)
+            sidebar = page.locator("aside.ps-sidebar-root")
+            enlace = sidebar.locator("a").filter(has_text=texto).first
+            await expect(enlace).to_be_visible(timeout=timeout)
+            await enlace.click(timeout=timeout)
+        except Exception as ex:
+            error = f"{type(ex).__name__}: {ex}"
+        finally:
+            # Mantiene la ventana observable y da tiempo a que termine la carga.
+            try:
+                await page.wait_for_timeout(espera_ms)
+            except Exception as ex:
+                if error is None:
+                    error = f"{type(ex).__name__}: {ex}"
+            if error is None and not page.is_closed():
+                try:
+                    await expect(page.locator("body")).to_be_visible(timeout=1000)
+                    url = page.url
+                except Exception as ex:
+                    error = f"{type(ex).__name__}: {ex}"
+
+        resultados.append({
+            "modulo": texto,
+            "url": url,
+            "ok": error is None,
+            "error": error,
+        })
+
+    return resultados
 
 
 async def esperar_menu_rol(page, rol, timeout=30000):
